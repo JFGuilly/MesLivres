@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ma Collection de Livres</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #fef3c7 0%, #fed7aa 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    .header h1 {
+      font-size: 2.5rem;
+      color: #78350f;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      font-size: 1.2rem;
+      color: #92400e;
+    }
+
+    .upload-box {
+      background: white;
+      border-radius: 12px;
+      padding: 40px;
+      text-align: center;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+
+    .upload-area {
+      border: 3px dashed #d97706;
+      border-radius: 12px;
+      padding: 60px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .upload-area:hover {
+      background: #fef3c7;
+      border-color: #92400e;
+    }
+
+    .message-box {
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .error {
+      background: #fee;
+      color: #c00;
+    }
+
+    .loading {
+      background: #def;
+      color: #06c;
+    }
+
+    .filters-box {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+      display: none;
+    }
+
+    .filters-box.visible {
+      display: block;
+    }
+
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .filter-item input,
+    .filter-item select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    .filter-item input:focus,
+    .filter-item select:focus {
+      outline: none;
+      border-color: #d97706;
+      box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.1);
+    }
+
+    .results-count {
+      text-align: center;
+      color: #92400e;
+      font-weight: bold;
+      margin-top: 15px;
+    }
+
+    .book-card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      transition: box-shadow 0.3s;
+    }
+
+    .book-card:hover {
+      box-shadow: 0 10px 15px rgba(0,0,0,0.15);
+    }
+
+    .book-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 15px;
+    }
+
+    .book-title {
+      font-size: 1.75rem;
+      font-weight: bold;
+      color: #1f2937;
+      margin-bottom: 8px;
+    }
+
+    .book-author {
+      font-size: 1.125rem;
+      color: #6b7280;
+      margin-bottom: 10px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+
+    .badge-pub {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-read {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .summary {
+      color: #4b5563;
+      line-height: 1.6;
+      margin-top: 15px;
+      margin-bottom: 15px;
+    }
+
+    .topic-badge {
+      background: #d1fae5;
+      color: #065f46;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.875rem;
+      display: inline-block;
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+
+    .expand-btn {
+      background: #f3f4f6;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 15px;
+      font-size: 1rem;
+    }
+
+    .expand-btn:hover {
+      background: #e5e7eb;
+    }
+
+    .book-details {
+      display: none;
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #e5e7eb;
+    }
+
+    .book-details.visible {
+      display: block;
+    }
+
+    .detail-box {
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+    }
+
+    .detail-box h3 {
+      margin-bottom: 10px;
+      font-size: 1rem;
+      font-weight: 600;
+    }
+
+    .incipit-box {
+      background: #fef3c7;
+    }
+
+    .excipit-box {
+      background: #fed7aa;
+    }
+
+    .quotes-box {
+      background: #dbeafe;
+    }
+
+    .highlight {
+      background: #fef08a;
+      font-weight: 600;
+      padding: 2px 4px;
+      border-radius: 3px;
+    }
+
+    .no-results {
+      text-align: center;
+      padding: 60px;
+      color: #9ca3af;
+      font-size: 1.2rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>📚 Ma Collection de Livres</h1>
+      <p class="subtitle" id="subtitle">Chargez votre fichier Excel pour commencer</p>
+    </div>
+
+    <div class="upload-box" id="uploadBox">
+      <div id="messageArea"></div>
+      <div class="upload-area" id="uploadArea">
+        <h2>📁 Charger votre fichier Excel</h2>
+        <p>Cliquez ici pour sélectionner votre fichier</p>
+        <p style="font-size: 0.9rem; color: #666; margin-top: 10px;">Fichiers .xlsx et .xls acceptés</p>
+      </div>
+      <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none;">
+      <div style="margin-top: 20px;">
+        <input type="file" id="fileInput2" accept=".xlsx,.xls" style="padding: 10px;">
+      </div>
+    </div>
+
+    <div class="filters-box" id="filtersBox">
+      <div class="filter-grid">
+        <div class="filter-item">
+          <input type="text" id="searchInput" placeholder="🔍 Rechercher...">
+        </div>
+        <div class="filter-item">
+          <select id="authorSelect">
+            <option value="all">Tous les auteurs</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <select id="yearSelect">
+            <option value="all">Année de lecture</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <select id="pubYearSelect">
+            <option value="all">Année de publication</option>
+          </select>
+        </div>
+        <div class="filter-item">
+          <select id="topicSelect">
+            <option value="all">Tous les thèmes</option>
+          </select>
+        </div>
+      </div>
+      <div class="results-count" id="resultsCount"></div>
+    </div>
+
+    <div id="booksContainer"></div>
+  </div>
+
+  <script>
+    var allBooks = [];
+    var filteredBooks = [];
+
+    function showMessage(message, type) {
+      var messageArea = document.getElementById('messageArea');
+      messageArea.innerHTML = '<div class="message-box ' + type + '">' + message + '</div>';
+    }
+
+    function clearMessage() {
+      document.getElementById('messageArea').innerHTML = '';
+    }
+
+    function handleFileSelect(file) {
+      if (!file) return;
+
+      showMessage('Traitement du fichier...', 'loading');
+
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var data = new Uint8Array(e.target.result);
+          var workbook = XLSX.read(data, {type: 'array'});
+          var sheet = workbook.Sheets[workbook.SheetNames[0]];
+          allBooks = XLSX.utils.sheet_to_json(sheet);
+
+          console.log('Livres chargés:', allBooks.length);
+          initApp();
+        } catch (error) {
+          console.error('Erreur:', error);
+          showMessage('Erreur lors du traitement du fichier: ' + error.message, 'error');
+        }
+      };
+      reader.onerror = function() {
+        showMessage('Erreur lors de la lecture du fichier', 'error');
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    document.getElementById('uploadArea').onclick = function() {
+      document.getElementById('fileInput').click();
+    };
+
+    document.getElementById('fileInput').onchange = function(e) {
+      handleFileSelect(e.target.files[0]);
+    };
+
+    document.getElementById('fileInput2').onchange = function(e) {
+      handleFileSelect(e.target.files[0]);
+    };
+
+    function initApp() {
+      document.getElementById('uploadBox').style.display = 'none';
+      document.getElementById('filtersBox').classList.add('visible');
+
+      populateFilters();
+      applyFilters();
+
+      document.getElementById('searchInput').oninput = applyFilters;
+      document.getElementById('authorSelect').onchange = applyFilters;
+      document.getElementById('yearSelect').onchange = applyFilters;
+      document.getElementById('pubYearSelect').onchange = applyFilters;
+      document.getElementById('topicSelect').onchange = applyFilters;
+    }
+
+    function populateFilters() {
+      var authors = {};
+      var years = {};
+      var pubYears = {};
+      var topics = {};
+
+      for (var i = 0; i < allBooks.length; i++) {
+        if (allBooks[i]['Auteur']) authors[allBooks[i]['Auteur']] = 1;
+        if (allBooks[i]['Année de lecture']) years[allBooks[i]['Année de lecture']] = 1;
+        if (allBooks[i]['Année de publication']) pubYears[allBooks[i]['Année de publication']] = 1;
+        if (allBooks[i]['Thèmes']) {
+          var ts = allBooks[i]['Thèmes'].split(',');
+          for (var j = 0; j < ts.length; j++) {
+            topics[ts[j].trim()] = 1;
+          }
+        }
+      }
+
+      var authorList = Object.keys(authors).sort();
+      var yearList = Object.keys(years).sort(function(a,b){return b-a;});
+      var pubYearList = Object.keys(pubYears).sort(function(a,b){return b-a;});
+      var topicList = Object.keys(topics).sort();
+
+      var authorSel = document.getElementById('authorSelect');
+      for (var a = 0; a < authorList.length; a++) {
+        var opt = document.createElement('option');
+        opt.value = authorList[a];
+        opt.text = authorList[a];
+        authorSel.add(opt);
+      }
+
+      var yearSel = document.getElementById('yearSelect');
+      for (var y = 0; y < yearList.length; y++) {
+        var opt2 = document.createElement('option');
+        opt2.value = yearList[y];
+        opt2.text = yearList[y];
+        yearSel.add(opt2);
+      }
+
+      var pubYearSel = document.getElementById('pubYearSelect');
+      for (var p = 0; p < pubYearList.length; p++) {
+        var opt3 = document.createElement('option');
+        opt3.value = pubYearList[p];
+        opt3.text = pubYearList[p];
+        pubYearSel.add(opt3);
+      }
+
+      var topicSel = document.getElementById('topicSelect');
+      for (var t = 0; t < topicList.length; t++) {
+        var opt4 = document.createElement('option');
+        opt4.value = topicList[t];
+        opt4.text = topicList[t];
+        topicSel.add(opt4);
+      }
+    }
+
+    function formatCitations(text, search) {
+      if (!text || typeof text !== 'string') return text;
+
+      var lines = text.split(/\r?\n/).filter(function(line) { return line.trim(); });
+      var result = '';
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line.startsWith('-')) {
+          line = '- ' + line;
+        }
+
+        // Apply highlighting if search term exists
+        if (search) {
+          var regex = new RegExp('(' + search + ')', 'gi');
+          line = line.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        result += '<div style="margin-bottom:8px;">' + line + '</div>';
+      }
+      return result;
+    }
+
+    function formatResume(text, search) {
+      if (!text || typeof text !== 'string') return text;
+
+      var lines = text.split(/\r?\n/).filter(function(line) { return line.trim(); });
+      var result = '';
+
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line.startsWith('-')) {
+          line = '- ' + line;
+        }
+
+        // Apply highlighting if search term exists
+        if (search) {
+          var regex = new RegExp('(' + search + ')', 'gi');
+          line = line.replace(regex, '<span class="highlight">$1</span>');
+        }
+
+        result += '<div style="margin-bottom:8px;">' + line + '</div>';
+      }
+      return result;
+    }
+
+    function highlightText(text, search) {
+      if (!search || !text || typeof text !== 'string') return text;
+
+      var regex = new RegExp('(' + search + ')', 'gi');
+      return text.replace(regex, '<span class="highlight">$1</span>');
+    }
+
+    function applyFilters() {
+      var search = document.getElementById('searchInput').value;
+      var author = document.getElementById('authorSelect').value;
+      var year = document.getElementById('yearSelect').value;
+      var pubYear = document.getElementById('pubYearSelect').value;
+      var topic = document.getElementById('topicSelect').value;
+
+      filteredBooks = [];
+
+      for (var i = 0; i < allBooks.length; i++) {
+        var book = allBooks[i];
+
+        var matchSearch = true;
+        if (search) {
+          matchSearch = false;
+          var searchLower = search.toLowerCase();
+
+          // Search in all text fields
+          var fieldsToSearch = [
+            'Titre',
+            'Auteur',
+            'Résumé',
+            'Personnages principaux',
+            'Thèmes',
+            'Prix',
+            'Incipit',
+            'Excipit',
+            'Phrases intéressantes',
+            'Citations'
+          ];
+
+          for (var j = 0; j < fieldsToSearch.length; j++) {
+            var field = fieldsToSearch[j];
+            if (book[field] && typeof book[field] === 'string' && book[field].toLowerCase().indexOf(searchLower) > -1) {
+              matchSearch = true;
+              break;
+            }
+          }
+        }
+
+        var matchAuthor = author === 'all' || book['Auteur'] === author;
+        var matchYear = year === 'all' || String(book['Année de lecture']) === year;
+        var matchPubYear = pubYear === 'all' || String(book['Année de publication']) === pubYear;
+        var matchTopic = topic === 'all' || (book['Thèmes'] && book['Thèmes'].indexOf(topic) > -1);
+
+        if (matchSearch && matchAuthor && matchYear && matchPubYear && matchTopic) {
+          filteredBooks.push(book);
+        }
+      }
+
+      displayBooks();
+    }
+
+    function displayBooks() {
+      document.getElementById('subtitle').textContent = allBooks.length + ' livres lus';
+      document.getElementById('resultsCount').textContent = 'Affichage de ' + filteredBooks.length + ' sur ' + allBooks.length + ' livres';
+
+      var container = document.getElementById('booksContainer');
+      container.innerHTML = '';
+
+      if (filteredBooks.length === 0) {
+        container.innerHTML = '<div class="no-results">📚<br>Aucun livre trouvé</div>';
+        return;
+      }
+
+      var searchTerm = document.getElementById('searchInput').value;
+
+      for (var i = 0; i < filteredBooks.length; i++) {
+        var book = filteredBooks[i];
+        var card = document.createElement('div');
+        card.className = 'book-card';
+
+        var html = '<div class="book-header"><div style="flex:1;">';
+        html += '<div class="book-title">' + highlightText(book['Titre'] || 'Sans titre', searchTerm) + '</div>';
+        html += '<div class="book-author">par ' + highlightText(book['Auteur'] || 'Auteur inconnu', searchTerm) + '</div>';
+        html += '<div>';
+        if (book['Année de publication']) {
+          html += '<span class="badge badge-pub">Publié: ' + book['Année de publication'] + '</span>';
+        }
+        if (book['Année de lecture']) {
+          html += '<span class="badge badge-read">Lu: ' + book['Année de lecture'] + '</span>';
+        }
+        html += '</div></div></div>';
+
+        if (book['Résumé']) {
+          html += '<div class="summary">' + formatResume(book['Résumé'], searchTerm) + '</div>';
+        }
+
+        if (book['Personnages principaux']) {
+          html += '<div style="margin:10px 0;"><strong>👥 Personnages principaux:</strong> ' + highlightText(book['Personnages principaux'], searchTerm) + '</div>';
+        }
+
+        if (book['Prix']) {
+          html += '<div style="margin:10px 0;"><strong>🏆 Prix:</strong> ' + highlightText(book['Prix'], searchTerm) + '</div>';
+        }
+
+        if (book['Thèmes']) {
+          html += '<div style="margin:10px 0;">';
+          var topics = book['Thèmes'].split(',');
+          for (var j = 0; j < topics.length; j++) {
+            html += '<span class="topic-badge">' + topics[j].trim() + '</span>';
+          }
+          html += '</div>';
+        }
+
+        html += '<button class="expand-btn" onclick="toggleDetails(' + i + ')">Voir les détails ▼</button>';
+        html += '<div class="book-details" id="details' + i + '">';
+
+        var hasDetails = false;
+
+        if (book['Incipit']) {
+          html += '<div class="detail-box incipit-box" style="border: 2px solid #fbbf24;"><h3>📖 Premières lignes (Incipit)</h3><p style="font-style:italic;">' + highlightText(book['Incipit'], searchTerm) + '</p></div>';
+          hasDetails = true;
+        }
+
+        if (book['Excipit']) {
+          html += '<div class="detail-box excipit-box" style="border: 2px solid #fb923c;"><h3>📕 Dernières lignes (Excipit)</h3><p style="font-style:italic;">' + highlightText(book['Excipit'], searchTerm) + '</p></div>';
+          hasDetails = true;
+        }
+
+        if (book['Phrases intéressantes']) {
+          html += '<div class="detail-box quotes-box" style="border: 2px solid #60a5fa;"><h3>💬 Citations intéressantes</h3>' + formatCitations(book['Phrases intéressantes'], searchTerm) + '</div>';
+          hasDetails = true;
+        }
+
+        if (book['Citations']) {
+          html += '<div class="detail-box quotes-box" style="border: 2px solid #60a5fa;"><h3>💬 Citations</h3>' + formatCitations(book['Citations'], searchTerm) + '</div>';
+          hasDetails = true;
+        }
+
+        if (!hasDetails) {
+          html += '<div style="text-align:center; padding:20px; color:#999;">Aucun détail supplémentaire disponible pour ce livre</div>';
+        }
+
+        html += '</div>';
+
+        card.innerHTML = html;
+        container.appendChild(card);
+      }
+    }
+
+    function toggleDetails(index) {
+      var details = document.getElementById('details' + index);
+      if (details.classList.contains('visible')) {
+        details.classList.remove('visible');
+      } else {
+        details.classList.add('visible');
+      }
+    }
+  </script>
+</body>
+</html>
